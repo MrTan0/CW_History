@@ -1,0 +1,340 @@
+CW2-ZHENGYUAN TAN-ING
+Zhengyuan Tan
+
+4/26/2022
+
+Introduction
+Exploratory analysis
+The data set consists of 7 measurements on 327 children. For each child, the following 7 variables were measured:
+
+age: Age of mother.
+gest: Gestation period.
+sex: Sex of child.
+smokes: Whether the mother smoked during pregnancy, with levels ’No’, ’Light’ and ’Heavy’.
+weight: Pre-pregnancy weight of mother.
+rate: Rate of growth of child in the first trimester.
+bwt: Birthweight of child.
+A brief preview of the data is as follows:
+
+## 
+## 载入程辑包：'dplyr'
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+## 'data.frame':    327 obs. of  7 variables:
+##  $ age   : num  25 34 29 23 26 30 27 26 40 19 ...
+##  $ gest  : num  294 252 280 280 266 245 273 273 287 287 ...
+##  $ sex   : Factor w/ 2 levels "Female","Male": 1 1 2 1 1 2 1 1 2 2 ...
+##  $ smokes: Factor w/ 3 levels "Heavy","Light",..: 3 3 1 2 2 1 3 3 3 3 ...
+##  $ weight: num  65.2 58.6 57.3 65.9 59.1 49.1 69.5 75 82 58.3 ...
+##  $ rate  : num  -0.01618 0.00678 0.03293 -0.02179 0.06346 ...
+##  $ bwt   : num  3870 2440 3400 2820 2940 2400 3080 3600 3600 3930 ...
+The following plot shows the pairwise scatter plots of each of the measurements.
+
+
+
+Sex and smokes shape should clearly be treated as categorical variables (factors), while others are treated as continuous (numerical).
+
+For more clear obversing the relationship between bwt and other measurements, the following plot shows the pairwise scatter plots of each of the continuous measurements and the boxplot of each the factor variables. Basic modeling lines are shown in the corresponding plot in the method of loess.
+
+
+
+Based on the 1st, 2nd, 5th and 6th figure, not all of the continuous variables were clearly associated with child birthweight. The value of bwt slightly varies up and down at an average value point as the age of mother and rate of growth of child in the first trimester increase. As the gestation period increases, the value of bwt increases very clearly and linearly. Children with heavier mother has a larger number of bwt, with a unclear linear relationship.
+
+Based on the 3rd and 4th graohics, both gender and level of smoking clearly have an effect on birghtweight. Male children have more birth weights overall than females, and the maximum and minimum birth weights for male children are much higher than the maximum and minimum values for females. By comparing the no smokes, light smokes and heavy smokes groups, the children of non-smoking mothers had higher birth weights than the children of smoking mothers. heavy smoke mothers had more children who weighed less.
+
+Modeling
+Model Selection
+For getting a basic linear model based on the data known, the AIC is used to select.
+
+## Start:  AIC=3940.13
+## bwt ~ age + gest + sex + smokes + weight + rate
+## 
+##          Df Sum of Sq      RSS    AIC
+## - smokes  2    377127 53619864 3938.4
+## <none>                53242737 3940.1
+## - sex     1    562308 53805046 3941.6
+## - age     1    608853 53851590 3941.9
+## - rate    1    945036 54187773 3943.9
+## - weight  1   2316985 55559723 3952.1
+## - gest    1  21910600 75153337 4050.8
+## 
+## Step:  AIC=3938.44
+## bwt ~ age + gest + sex + weight + rate
+## 
+##          Df Sum of Sq      RSS    AIC
+## <none>                53619864 3938.4
+## - age     1    612051 54231916 3940.2
+## - sex     1    625846 54245711 3940.2
+## - rate    1    893356 54513220 3941.8
+## - weight  1   2434326 56054190 3951.0
+## - gest    1  22276595 75896460 4050.1
+## Start:  AIC=4073.66
+## bwt ~ 1
+## 
+##          Df Sum of Sq      RSS    AIC
+## + gest    1  24396127 59200907 3962.8
+## + weight  1   6075273 77521761 4051.0
+## + age     1    629983 82967051 4073.2
+## + sex     1    586635 83010399 4073.4
+## + smokes  2   1025781 82571253 4073.6
+## <none>                83597034 4073.7
+## 
+## Step:  AIC=3962.82
+## bwt ~ gest
+## 
+##          Df Sum of Sq      RSS    AIC
+## + weight  1   3150340 56050567 3946.9
+## + age     1   1644239 57556667 3955.6
+## + sex     1    544129 58656778 3961.8
+## <none>                59200907 3962.8
+## + smokes  2    502677 58698229 3964.0
+## - gest    1  24396127 83597034 4073.7
+## 
+## Step:  AIC=3946.94
+## bwt ~ gest + weight
+## 
+##          Df Sum of Sq      RSS    AIC
+## + age     1    910589 55139978 3943.6
+## + sex     1    664161 55386406 3945.0
+## <none>                56050567 3946.9
+## + smokes  2    383751 55666816 3948.7
+## - weight  1   3150340 59200907 3962.8
+## - gest    1  21471195 77521761 4051.0
+## 
+## Step:  AIC=3943.58
+## bwt ~ gest + weight + age
+## 
+##          Df Sum of Sq      RSS    AIC
+## + sex     1    626758 54513220 3941.8
+## <none>                55139978 3943.6
+## + smokes  2    384745 54755233 3945.3
+## - age     1    910589 56050567 3946.9
+## - weight  1   2416690 57556667 3955.6
+## - gest    1  22252013 77391991 4052.4
+## 
+## Step:  AIC=3941.85
+## bwt ~ gest + weight + age + sex
+## 
+##          Df Sum of Sq      RSS    AIC
+## <none>                54513220 3941.8
+## - sex     1    626758 55139978 3943.6
+## + smokes  2    325447 54187773 3943.9
+## - age     1    873186 55386406 3945.0
+## - weight  1   2528552 57041772 3954.7
+## - gest    1  22136026 76649246 4051.3
+From the result of the method of model selection, the modelling now is:
+
+bwt={ a+b×gest+c×weight+d×age+d,	sex=Male	a+b×gest+c×weight+d×age,	sex=Famale 
+
+The summary of the model:
+
+## 
+## Call:
+## lm(formula = bwt ~ gest + weight + age + sex, data = Births)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1077.97  -265.06   -15.99   264.84  1855.33 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -3891.224    584.184  -6.661 1.18e-10 ***
+## gest           23.513      2.056  11.435  < 2e-16 ***
+## weight          9.353      2.420   3.865 0.000135 ***
+## age             9.781      4.307   2.271 0.023803 *  
+## sexMale        87.851     45.658   1.924 0.055224 .  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 411.5 on 322 degrees of freedom
+## Multiple R-squared:  0.3479, Adjusted R-squared:  0.3398 
+## F-statistic: 42.95 on 4 and 322 DF,  p-value: < 2.2e-16
+Check the Outlier and high-influence point.
+library(car)
+## 载入需要的程辑包：carData
+## 
+## 载入程辑包：'car'
+## The following object is masked from 'package:dplyr':
+## 
+##     recode
+influencePlot(m01)
+
+ 
+ 
+StudRes
+<dbl>
+Hat
+<dbl>
+CookD
+<dbl>
+43	-1.0307777	0.071646466	0.01639672
+133	-2.1360809	0.043038078	0.04059239
+137	4.6755484	0.009641066	0.03997290
+231	-0.8742134	0.074101733	0.01224188
+236	2.5753565	0.039134627	0.05309728
+290	3.4857535	0.009852784	0.02337211
+6 rows
+The outliers number are 43, 133, 137, 231, 236, 290. The data should not be ignore in the modeling process. However, due to the small number of measurements here, temporarily ignore them in the modelling.
+
+m02 <- update(m01, 
+                   subset = !rownames(Births) %in% c('41','133','137','231','262','290'))
+
+summary(m02)
+## 
+## Call:
+## lm(formula = bwt ~ gest + weight + age + sex, data = Births, 
+##     subset = !rownames(Births) %in% c("41", "133", "137", "231", 
+##         "262", "290"))
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1025.0  -254.3     1.5   263.7  1272.2 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -3288.475    580.658  -5.663 3.34e-08 ***
+## gest           21.731      2.039  10.660  < 2e-16 ***
+## weight          7.875      2.310   3.409 0.000737 ***
+## age             9.192      4.056   2.266 0.024120 *  
+## sexMale        53.776     43.211   1.245 0.214233    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 385.6 on 316 degrees of freedom
+## Multiple R-squared:  0.3132, Adjusted R-squared:  0.3045 
+## F-statistic: 36.03 on 4 and 316 DF,  p-value: < 2.2e-16
+Trying to improve
+For trying to make a transformation to bwt, check the histogram of rstudent of the model 
+
+For obtaining a symmetrical image, try log(bwt): 
+
+It will be easy to get a nice model.
+
+## 
+## Call:
+## lm(formula = log(bwt) ~ gest + weight + age + sex, data = Births)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.42065 -0.07302  0.00442  0.08471  0.39069 
+## 
+## Coefficients:
+##              Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 5.7650638  0.1709212  33.729  < 2e-16 ***
+## gest        0.0076997  0.0006016  12.798  < 2e-16 ***
+## weight      0.0025118  0.0007081   3.547 0.000447 ***
+## age         0.0031381  0.0012601   2.490 0.013268 *  
+## sexMale     0.0275226  0.0133588   2.060 0.040176 *  
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1204 on 322 degrees of freedom
+## Multiple R-squared:  0.3884, Adjusted R-squared:  0.3808 
+## F-statistic: 51.12 on 4 and 322 DF,  p-value: < 2.2e-16
+To further improve this model, check the Component and Residual Plot, firstly.
+
+ Referring to the analysis section, the independent variables need to be transformed to fix the non-linear situation.
+
+m04 <- lm(log(bwt) ~ I(gest^2) + gest + I(weight^3) + I(weight^2) + weight + I(age^3) + I(age^2) + age + sex, data = Births)
+crPlots(m04)
+ 
+
+##             Test stat Pr(>|Test stat|)
+## I(gest^2)      0.1061           0.9156
+## gest           1.4037           0.1614
+## I(weight^3)   -1.0291           0.3042
+## I(weight^2)   -1.0162           0.3103
+## weight        -0.5785           0.5633
+## I(age^3)       1.1217           0.2628
+## I(age^2)       1.2371           0.2170
+## age            0.6583           0.5108
+## sex                                   
+## Tukey test    -0.3436           0.7312
+## 
+## Call:
+## lm(formula = log(bwt) ~ I(gest^2) + gest + I(weight^3) + I(weight^2) + 
+##     weight + I(age^3) + I(age^2) + age + sex, data = Births)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.30876 -0.06858  0.00346  0.07442  0.41361 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -2.820e+00  2.171e+00  -1.299   0.1950    
+## I(gest^2)   -1.313e-04  2.683e-05  -4.893 1.58e-06 ***
+## gest         7.870e-02  1.451e-02   5.422 1.17e-07 ***
+## I(weight^3) -1.408e-06  2.468e-06  -0.571   0.5686    
+## I(weight^2)  2.269e-04  5.017e-04   0.452   0.6514    
+## weight      -8.505e-03  3.309e-02  -0.257   0.7973    
+## I(age^3)    -4.811e-05  2.511e-05  -1.916   0.0563 .  
+## I(age^2)     3.885e-03  2.150e-03   1.807   0.0717 .  
+## age         -9.760e-02  5.995e-02  -1.628   0.1045    
+## sexMale      1.948e-02  1.300e-02   1.498   0.1351    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1154 on 317 degrees of freedom
+## Multiple R-squared:  0.4463, Adjusted R-squared:  0.4305 
+## F-statistic: 28.39 on 9 and 317 DF,  p-value: < 2.2e-16
+summary(m04)
+## 
+## Call:
+## lm(formula = log(bwt) ~ I(gest^2) + gest + I(weight^3) + I(weight^2) + 
+##     weight + I(age^3) + I(age^2) + age + sex, data = Births)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -0.30876 -0.06858  0.00346  0.07442  0.41361 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -2.820e+00  2.171e+00  -1.299   0.1950    
+## I(gest^2)   -1.313e-04  2.683e-05  -4.893 1.58e-06 ***
+## gest         7.870e-02  1.451e-02   5.422 1.17e-07 ***
+## I(weight^3) -1.408e-06  2.468e-06  -0.571   0.5686    
+## I(weight^2)  2.269e-04  5.017e-04   0.452   0.6514    
+## weight      -8.505e-03  3.309e-02  -0.257   0.7973    
+## I(age^3)    -4.811e-05  2.511e-05  -1.916   0.0563 .  
+## I(age^2)     3.885e-03  2.150e-03   1.807   0.0717 .  
+## age         -9.760e-02  5.995e-02  -1.628   0.1045    
+## sexMale      1.948e-02  1.300e-02   1.498   0.1351    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1154 on 317 degrees of freedom
+## Multiple R-squared:  0.4463, Adjusted R-squared:  0.4305 
+## F-statistic: 28.39 on 9 and 317 DF,  p-value: < 2.2e-16
+knitr::kable(summary(m04)$coefficients)
+Estimate	Std. Error	t value	Pr(>|t|)
+(Intercept)	-2.8196037	2.1711108	-1.2986918	0.1949936
+I(gest^2)	-0.0001313	0.0000268	-4.8929350	0.0000016
+gest	0.0786995	0.0145143	5.4222134	0.0000001
+I(weight^3)	-0.0000014	0.0000025	-0.5706539	0.5686386
+I(weight^2)	0.0002269	0.0005017	0.4522783	0.6513778
+weight	-0.0085049	0.0330882	-0.2570379	0.7973163
+I(age^3)	-0.0000481	0.0000251	-1.9159074	0.0562761
+I(age^2)	0.0038854	0.0021505	1.8067488	0.0717496
+age	-0.0975996	0.0599524	-1.6279524	0.1045284
+sexMale	0.0194774	0.0130009	1.4981563	0.1350878
+##      bwt 
+## 416.2654
+This the final model which not ignore the outliers. The Birthweight of children is influenced by the 1,2,3,4,.
+
+Summary
+For simpler reporting to medical professionals, a non-technical summary of findings and conclusions is necessary.
+The final model for the birthweight of children is as following: $$
+
+=
+{ exp(a+b1×gest2+b2×gest+c1×weight3+c2×weight2+c3×weight+d1×age3+d2×age2+d3×age+e),	sex=Male	exp(a+b1×gest2+b2×gest+c1×weight3+c2×weight2+c3×weight+d1×age3+d2×age2+d3×age),	sex=Famale 
+$$
+
+After the calculations in R, the values of the individual parameters are:
+
+library(knitr)
+res<- data.frame(sep=1:5,name=LETTERS[1:5],month=month.abb[1:5])
+knitr::kable(res,format = "latex",booktabs=TRUE)
