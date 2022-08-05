@@ -1,0 +1,284 @@
+---
+title: "CW2-ZHENGYUAN TAN-ING"
+author: "Zhengyuan Tan"
+date: "4/26/2022"
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+```{r setup, echo=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
+## Introduction
+
+Two sets of real measurements are known and now we need to using only the training data (BirthTrain) for assessing associations between birthweight and other variables, and tested for prediction using the other (BirthTest).
+
+The data set consists of 7 measurements on 327 children. For each child, the following 7 variables were measured:
+
+-   age: Age of mother.
+
+-   gest: Gestation period.
+
+-   sex: Sex of child.
+
+-   smokes: Whether the mother smoked during pregnancy, with levels 'No', 'Light' and 'Heavy'.
+
+-   weight: Pre-pregnancy weight of mother.
+
+-   rate: Rate of growth of child in the first trimester.
+
+-   bwt: Birthweight of child.
+
+## Exploratory analysis
+
+A brief preview of the data of train is as follows:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+
+
+Births <- read.table("BirthTrain.txt",
+                     header = TRUE, 
+                     colClasses = c(
+                       'age' = 'numeric',
+                       'gest' = 'numeric',
+                       'sex' = 'factor',
+                       'smokes' = 'factor',
+                       'bwt' = 'numeric'
+                     ))
+
+BirthsTest <- read.table("BirthTest.txt",
+                         header = TRUE, 
+                        colClasses = c(
+                       'age' = 'numeric',
+                       'gest' = 'numeric',
+                       'sex' = 'factor',
+                       'smokes' = 'factor',
+                       'bwt' = 'numeric')
+)
+
+str(Births)
+
+```
+
+The following plot shows the pairwise scatter plots of each of the measurements.
+
+```{r echo = FALSE, fig.align='center'}
+plot(Births)
+```
+
+Sex and smokes shape should clearly be treated as categorical variables (factors), while others are treated as continuous (numerical).
+
+For more clear obversing the relationship between bwt and other measurements, the following plot shows the pairwise scatter plots of each of the continuous measurements and the boxplot of each the factor variables. Basic modeling lines are shown in the corresponding plot in the method of loess.
+
+```{r echo=FALSE, message = FALSE, fig.align='center'}
+library(ggplot2)
+library(cowplot)
+p1 <- ggplot(data = Births, 
+             mapping = aes(
+               x = age,
+               y = bwt
+             )) + geom_point() + geom_smooth()
+
+p2 <- ggplot(data = Births,
+             mapping = aes(
+               x = gest,
+               y = bwt
+             )) + geom_point() + geom_smooth()
+
+p3 <- ggplot(data = Births,
+             mapping = aes(
+               x = sex,
+               y = bwt
+             )) + geom_boxplot()
+
+p4 <- ggplot(data = Births,
+             mapping = aes(
+               x = smokes,
+               y = bwt
+             )) + geom_boxplot()
+
+p5 <- ggplot(data = Births,
+             mapping = aes(
+               x = weight,
+               y = bwt
+             )) + geom_point() + geom_smooth()
+
+p6 <- ggplot(data = Births,
+             mapping = aes(
+               x = rate,
+               y = bwt
+             )) + geom_point() + geom_smooth()
+
+
+plot_grid(p1,p2,p3,p4,p5,p6, ncol = 3, nrow = 2 )
+```
+
+Based on the 1st, 2nd, 5th and 6th figure, not all of the continuous variables were clearly associated with child birthweight. The value of bwt slightly varies up and down at an average value point as the age of mother and rate of growth of child in the first trimester increase. As the gestation period increases, the value of bwt increases very clearly and linearly. Children with heavier mother has a larger number of bwt, with a unclear linear relationship.
+
+Based on the 3rd and 4th figure, both gender and level of smoking clearly have an effect on birthweight. Male children have more birth weights overall than females, and the maximum and minimum birth weights for male children are much higher than the maximum and minimum values for females. By comparing the no smokes, light smokes and heavy smokes groups, the children of non-smoking mothers had higher birth weights than the children of smoking mothers. heavy smoke mothers had more children who weighed less.
+
+However, as there are less than 300 cases in this data set, there is a possibility that the performance of the overall correlation trend may not be realistic.
+
+## Modeling
+
+### Stepwise regression
+
+For getting a basic linear model based on the data known, AIC (*Akaike information criterion)* is used to select as the criterion. Here is the processes:
+
+```{r, echo = FALSE}
+
+fit0 <- lm(bwt~1, data = Births)
+fit_step2 <- step(fit0, scope = bwt ~ age + gest + sex + smokes + weight + age)
+
+```
+
+From the result of the method of model selection, the modelling now is:
+
+$$
+bwt = \begin{cases}
+a + b\times gest + c\times weight + d \times age + d,  &   sex = Male \\
+a + b\times gest + c\times weight + d \times age,  &   sex = Famale
+\end{cases}
+$$
+
+The summary of the model:
+
+```{r, echo=FALSE}
+
+m01 <- lm(bwt ~ gest + weight + age + sex, data = Births)
+summary(m01)
+
+```
+
+### Trying to improve
+
+For checking the model, here are some diagnostic plots.
+
+```{r echo=FALSE}
+library(car)
+hist(rstudent(m01))
+qqPlot(m01)
+```
+
+It could be observed that the QQ-plot and the histogram of rstudent suggests a positive skew. As a result, moving the response variable down ladder of powers could be a good.
+
+After several attempts at transformation, log(bwt) as the dependent variable gave the best results. Here is the new histogram of r student.
+
+```{r echo=FALSE}
+m02 <- lm(log(bwt) ~ gest + weight + age + sex, data = Births)
+hist(rstudent(m02))
+```
+
+Check the residual plots now:
+
+```{r echo=FALSE}
+
+crPlots(m02)
+```
+
+The figures show the non-linearity in how the response upon other varibles. Trying to transforming the gest, weight and age to make the relationship linear. After several attempts, the following image shows the adjusted CRplots, which shows that the relationship between bwt and the other variables becomes quite linear.
+
+```{r}
+m03 <- lm(log(bwt) ~ I(gest^2) + gest + I(weight^3) + I(weight^2) + weight + I(age^3) + I(age^2) + age + sex, data = Births)
+crPlots(m03)
+```
+
+Now, the model looks almost perfect. It is:
+
+$$
+log(bwt) = \begin{cases}
+a + b_1\times (gest)^2 + b_2\times (gest) + c_1\times (weight)^3 + c_2\times (weight)^2 + c_3 \times weight + d_1 \times (age)^3 + d_2 \times (age)^2 + d_3 \times age + e,  &   sex = Male \\
+a + b_1\times (gest)^2 + b_2\times (gest) + c_1\times (weight)^3 + c_2\times (weight)^2 + c_3 \times weight + d_1 \times (age)^3 + d_2 \times (age)^2 + d_3 \times age,  &   sex = Famale
+\end{cases}
+$$
+
+```{r}
+summary(m03)
+```
+
+### Check the outlier and high-influence point
+
+Having obtained a working model, it is essential to check the outlier and high-influence point.
+
+```{r}
+library(car)
+influencePlot(m03)
+influenceIndexPlot(m03)
+```
+
+The outliers number are 133, 137, 187, 236, 290. It is difficult to decide weather the data should be ignore in the modeling process or not. However, due to the small number of measurements here, we do not ignore them in the modelling.
+
+## Non-technical Summary
+
+For simpler reporting to medical professionals, a non-technical summary of findings and conclusions is necessary.
+
+The final model for the birthweight of children is as following: $$
+bwt = \begin{cases}
+exp[a + b_1\times (gest)^2 + b_2\times (gest) + c_1\times (weight)^3 + c_2\times (weight)^2 + c_3 \times weight + d_1 \times (age)^3 + d_2 \times (age)^2 + d_3 \times age + e],  &   sex = Male \\
+exp[a + b_1\times (gest)^2 + b_2\times (gest) + c_1\times (weight)^3 + c_2\times (weight)^2 + c_3 \times weight + d_1 \times (age)^3 + d_2 \times (age)^2 + d_3 \times age],  &   sex = Famale
+\end{cases}
+$$After the calculations in R, the values of the individual parameters are:
+
++---------------------------------+----------------------------------+
+| coefficient                     | value                            |
++:===============================:+==================================+
+| a                               | -2.82                            |
++---------------------------------+----------------------------------+
+| b_1                             | -1.313 × 10\^(-4)                |
++---------------------------------+----------------------------------+
+| b_2                             | 7.87 × 10\^(-2)                  |
++---------------------------------+----------------------------------+
+| c_1                             | -1.408 × 10\^(-6)                |
++---------------------------------+----------------------------------+
+| c_2                             | 2.269 × 10\^(-4)                 |
++---------------------------------+----------------------------------+
+| c_3                             | -8505 × 10\^(-3)                 |
++---------------------------------+----------------------------------+
+| d_1                             | -4.811 × 10\^(-5)                |
++---------------------------------+----------------------------------+
+| d_2                             | 3.885 × 10\^(-3)                 |
++---------------------------------+----------------------------------+
+| d_3                             | -9.760 × 10\^(-2)                |
++---------------------------------+----------------------------------+
+| e                               | 1.948 × 10\^(-2)                 |
++---------------------------------+----------------------------------+
+
+This model can basically predict the birth weight of a newborn from the measurements age of mother, gestation period, sex of child, pre-pregnancy weight of mother.
+
+## Compare with the predictions
+
+Use the model we get to predict the birthweight of children and compare them with the actual weight, here is the mean of squared error:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(dplyr)
+
+TestResponses <- select(BirthsTest, bwt)
+
+predictions <- predict(m03, newdata=select(BirthsTest, -bwt))
+mse_fit <- (exp(predictions) - TestResponses)^2
+colMeans(mse_fit)
+```
+
+Thus, the mean error in weight prediction for these 100 newborns can be calculated as 416g, which is an acceptable error.
+
+For the model of the form: *bwt = intercept + age + gest + sex +smokes +weight +rate*, in many ways, it is clear that the current model is better.
+
+```{r}
+m00 <- lm(bwt~age + gest + sex +smokes +weight +rate ,data = Births)
+summary(m00)
+
+predictions <- predict(m00, newdata=select(BirthsTest, -bwt))
+mse_fit2 <- (predictions - TestResponses)^2
+colMeans(mse_fit2)
+```
+
+The adjust R-square of the 2nd model is 0.3491, while the R-square of 1st model is 0.4305. However, the MSE of 2nd model is less than 1st.
+
+It is not unusual for this to occur, and while it is true that the model derived from the training data is a better fit, the number of training data is such that this linear model is not necessarily reliable due to the limitations of the training data.
+
+```{r}
+anova(m00,m03)
+```
